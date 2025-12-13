@@ -12,6 +12,7 @@ import (
 	"github.com/muazwzxv/kafka-consumer-worker/internal/config"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/consumer/streamHandler"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/repository"
+	"github.com/samber/do/v2"
 )
 
 type Consumer struct {
@@ -22,18 +23,16 @@ type Consumer struct {
 	cancelFuncs []context.CancelFunc
 }
 
-// HandlerDependencies contains all dependencies needed by stream handlers
-type HandlerDependencies struct {
-	UserRepo repository.UserRepository
-}
-
 // Init creates a consumer with handlers built from config and dependencies
-func Init(cfg *config.Config, deps *HandlerDependencies) (*Consumer, error) {
+func Init(i do.Injector) (*Consumer, error) {
+	cfg := do.MustInvoke[*config.Config](i)
+	userRepo := do.MustInvoke[repository.UserRepository](i)
+
 	handlers := make(map[string]streamHandler.MessageHandler)
 
 	if cfg.Streams.UserLifecycle.Enable {
 		handler := streamHandler.NewUserLifecycleHandler(
-			deps.UserRepo,
+			userRepo,
 			cfg.Streams.UserLifecycle.Topic,
 		)
 		handlers[cfg.Streams.UserLifecycle.Topic] = handler

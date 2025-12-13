@@ -18,3 +18,11 @@ max_idle_conns = 10
 conn_max_lifetime = "5m"
 retry_attempts = 3
 retry_backoff = "2s"
+
+[kafka]
+broker = "localhost:9092"
+consumer_group = "my-consumer-group"
+
+[streams.user_lifecycle]
+enable = true
+topic = "user-lifecycle-events"

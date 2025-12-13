@@ -13,7 +13,17 @@ services:
       - kafka-consumer-worker-mysql-data:/var/lib/mysql
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-prootpassword",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -35,12 +45,18 @@ services:
     networks:
       - kafka-consumer-worker-network
 
-
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: kafka-consumer-worker-kafka
     hostname: kafka
     environment:
+      # Overwrite replication factor to 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+
       # KRaft mode configuration
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -62,7 +78,11 @@ services:
     volumes:
       - kafka-consumer-worker-kafka-data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -85,30 +105,26 @@ services:
     networks:
       - kafka-consumer-worker-network
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: kafka-consumer-worker:latest
-    container_name: kafka-consumer-worker-app
-    env_file:
-      - .env.docker
-    ports:
-      - "8080:8080"
-    depends_on:
-      mysql:
-        condition: service_healthy
-
-      redis:
-        condition: service_healthy
-
-
-      kafka:
-        condition: service_healthy
-
-    networks:
-      - kafka-consumer-worker-network
-    restart: unless-stopped
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: kafka-consumer-worker:latest
+  #   container_name: kafka-consumer-worker-app
+  #   env_file:
+  #     - .env.docker
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     kafka:
+  #       condition: service_healthy
+  #   networks:
+  #     - kafka-consumer-worker-network
+  #   restart: unless-stopped
 
 volumes:
   kafka-consumer-worker-mysql-data:
@@ -117,10 +133,8 @@ volumes:
   kafka-consumer-worker-redis-data:
     driver: local
 
-
   kafka-consumer-worker-kafka-data:
     driver: local
-
 
 networks:
   kafka-consumer-worker-network:

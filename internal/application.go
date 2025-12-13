@@ -11,8 +11,8 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/samber/do/v2"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/config"
+	"github.com/muazwzxv/kafka-consumer-worker/internal/consumer"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/database"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/database/store"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/handler"
@@ -20,6 +20,7 @@ import (
 	userHandler "github.com/muazwzxv/kafka-consumer-worker/internal/handler/user"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/repository"
 	service "github.com/muazwzxv/kafka-consumer-worker/internal/service/user"
+	"github.com/samber/do/v2"
 )
 
 // Application represents the main application with dependency injection
@@ -63,6 +64,8 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 	// Provide handlers
 	do.Provide(injector, healthHandler.NewHealthHandler)
 	do.Provide(injector, userHandler.NewUserHandler)
+
+	do.Provide(injector, consumer.Init)
 
 	// Invoke fiber app to initialize it and register routes
 	app := do.MustInvoke[*fiber.App](injector)
@@ -173,19 +176,28 @@ func (a *Application) Start() error {
 		}
 	}()
 
+	// Start consumer worker in goroutine
+	go func() {
+		consumerContext := context.Background()
+		consumer := do.MustInvoke[*consumer.Consumer](a.injector)
+		if err := consumer.Start(consumerContext); err != nil {
+			errChan <- err
+		}
+	}()
+
 	// Handle graceful shutdown with DI container
 	go func() {
 		// ShutdownOnSignals blocks until signal is received
 		signal, _ := a.injector.RootScope().ShutdownOnSignals(syscall.SIGTERM, os.Interrupt)
 		log.Infow("application received shutdown signal",
 			"signal", signal)
-		
+
 		// Shutdown Fiber server
 		if err := a.app.Shutdown(); err != nil {
 			log.Errorw("application shutdown error",
 				"error", err)
 		}
-		
+
 		log.Info("application shutdown complete")
 		errChan <- nil
 	}()
