@@ -10,6 +10,7 @@ import (
 type UserRepository interface {
 	Create(ctx context.Context, item *entity.User) error
 	GetByUUID(ctx context.Context, uuid string) (*entity.User, error)
+	UpdateUser(ctx context.Context, user *entity.User) error
 }
 
 type DatabaseRepository interface {

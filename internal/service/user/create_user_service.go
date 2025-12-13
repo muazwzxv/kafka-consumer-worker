@@ -2,12 +2,14 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/dto/request"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/dto/response"
+	"github.com/muazwzxv/kafka-consumer-worker/internal/dto/stream"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/entity"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/publisher"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/repository"
@@ -52,7 +54,7 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req request.CreateUser
 	}
 
 	user, err := s.repo.GetByUUID(ctx, item.UUID)
-	if err != nil && !errors.Is(err, repository.ErrNotFound) {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, response.BuildError(
 			fiber.StatusInternalServerError,
 			"DB_ERROR",
@@ -70,7 +72,15 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req request.CreateUser
 }
 
 func (s *UserServiceImpl) publish(ctx context.Context, user *entity.User) error {
-	return s.userLifecyclePublisher.Publish(ctx, user)
+	payload := &stream.UserLifeCycleStream{
+		UUID:        user.UUID,
+		Name:        user.Name,
+		Description: user.Description,
+		Status:      user.Status.String(),
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+	}
+	return s.userLifecyclePublisher.Publish(ctx, payload)
 }
 
 func (s *UserServiceImpl) entityToResponse(item *entity.User) *response.UserResponse {

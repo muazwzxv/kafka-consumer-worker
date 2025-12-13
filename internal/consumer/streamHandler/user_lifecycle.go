@@ -6,6 +6,9 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/muazwzxv/kafka-consumer-worker/internal/consumer/streamHandler/logic"
+	"github.com/muazwzxv/kafka-consumer-worker/internal/dto/stream"
+	"github.com/muazwzxv/kafka-consumer-worker/internal/entity"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/repository"
 )
 
@@ -28,19 +31,23 @@ func (h *UserLifecycleHandler) TopicName() string {
 func (h *UserLifecycleHandler) Handle(ctx context.Context, msg *message.Message) error {
 	log.Infof("Processing message from topic %s: %s", h.topic, msg.UUID)
 
-	var payload map[string]interface{}
-	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+	var userLifecycleStream *stream.UserLifeCycleStream
+	if err := json.Unmarshal(msg.Payload, &userLifecycleStream); err != nil {
 		log.Errorf("Failed to unmarshal message %s: %v", msg.UUID, err)
 		return err
 	}
 
-	log.Infof("Message payload: %+v", payload)
+	log.Infof("Message payload: %+v", userLifecycleStream)
 
-	// TODO: Process with your repository
-	// Example: Extract user data and call repository methods
-	// if err := h.userRepo.Create(ctx, userData); err != nil {
-	//     return err
-	// }
+	if userLifecycleStream.Status == entity.UserStatusPending.String() {
+		l := logic.UserCreatedLogic{
+			UserRepo: h.userRepo,
+		}
+
+		if err := l.ProcessUserPendingCreation(ctx, userLifecycleStream); err != nil {
+			log.Errorf("Failed to process user pending activation uuid:%s: %v", msg.UUID, err)
+		}
+	}
 
 	msg.Ack()
 	return nil
