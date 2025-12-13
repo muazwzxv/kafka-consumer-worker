@@ -18,6 +18,7 @@ import (
 	"github.com/muazwzxv/kafka-consumer-worker/internal/handler"
 	healthHandler "github.com/muazwzxv/kafka-consumer-worker/internal/handler/health"
 	userHandler "github.com/muazwzxv/kafka-consumer-worker/internal/handler/user"
+	"github.com/muazwzxv/kafka-consumer-worker/internal/publisher"
 	"github.com/muazwzxv/kafka-consumer-worker/internal/repository"
 	service "github.com/muazwzxv/kafka-consumer-worker/internal/service/user"
 	"github.com/samber/do/v2"
@@ -56,7 +57,10 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 	do.Provide(injector, NewQueries)
 
 	// Provide repositories
-	do.Provide(injector, repository.NewMySQLUserRepository)
+	do.Provide(injector, repository.NewUserRepository)
+
+	// Provide publishers
+	do.Provide(injector, publisher.NewUserLifecyclePublisher)
 
 	// Provide services
 	do.Provide(injector, service.NewUserService)
@@ -75,7 +79,7 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 
 	log.Infow("application initialized successfully",
 		"di_enabled", true,
-		"providers_count", 8)
+		"providers_count", 9)
 
 	return &Application{
 		injector: injector,
@@ -187,15 +191,17 @@ func (a *Application) Start() error {
 
 	// Handle graceful shutdown with DI container
 	go func() {
-		// ShutdownOnSignals blocks until signal is received
 		signal, _ := a.injector.RootScope().ShutdownOnSignals(syscall.SIGTERM, os.Interrupt)
-		log.Infow("application received shutdown signal",
-			"signal", signal)
+		log.Infow("application received shutdown signal", "signal", signal)
 
-		// Shutdown Fiber server
+		if pub, err := do.Invoke[*publisher.UserLifecyclePublisher](a.injector); err == nil {
+			if err := pub.Close(); err != nil {
+				log.Errorw("failed to close user lifecycle publisher", "error", err)
+			}
+		}
+
 		if err := a.app.Shutdown(); err != nil {
-			log.Errorw("application shutdown error",
-				"error", err)
+			log.Errorw("application shutdown error", "error", err)
 		}
 
 		log.Info("application shutdown complete")

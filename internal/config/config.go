@@ -10,10 +10,11 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Kafka    KafkaConfig    `mapstructure:"kafka"`
-	Streams  StreamConfigs  `mapstructure:"streams"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Database   DatabaseConfig   `mapstructure:"database"`
+	Kafka      KafkaConfig      `mapstructure:"kafka"`
+	Streams    StreamConfigs    `mapstructure:"streams"`
+	Publishers PublisherConfigs `mapstructure:"publishers"`
 }
 
 type KafkaConfig struct {
@@ -26,6 +27,15 @@ type StreamConfigs struct {
 }
 
 type StreamConfig struct {
+	Enable bool   `mapstructure:"enable"`
+	Topic  string `mapstructure:"topic"`
+}
+
+type PublisherConfigs struct {
+	UserLifecycle PublisherConfig `mapstructure:"user_lifecycle"`
+}
+
+type PublisherConfig struct {
 	Enable bool   `mapstructure:"enable"`
 	Topic  string `mapstructure:"topic"`
 }
@@ -128,6 +138,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("database.conn_max_lifetime", "5m")
 	v.SetDefault("database.retry_attempts", 3)
 	v.SetDefault("database.retry_backoff", "2s")
+
+	v.SetDefault("publishers.user_lifecycle.enable", false)
+	v.SetDefault("publishers.user_lifecycle.topic", "user-lifecycle-events")
 }
 
 // Load reads configuration from a TOML file (backward compatibility).

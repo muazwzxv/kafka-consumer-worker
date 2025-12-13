@@ -24,8 +24,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	logger.Infow("creating user",
-		"name", req.Name,
-		"status", req.Status)
+		"name", req.Name)
 
 	result, err := h.service.CreateUser(c.Context(), req)
 	if err != nil {
@@ -36,7 +35,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	logger.Infow("user created successfully",
-		"id", result.ID,
+		"uuid", result.UUID,
 		"name", result.Name)
 
 	return c.Status(fiber.StatusCreated).JSON(result)

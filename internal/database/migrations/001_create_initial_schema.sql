@@ -2,6 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    uuid VARCHAR(36) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     status VARCHAR(50) NOT NULL,

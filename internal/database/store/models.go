@@ -10,6 +10,7 @@ import (
 
 type User struct {
 	ID          int64          `db:"id" json:"id"`
+	Uuid        string         `db:"uuid" json:"uuid"`
 	Name        string         `db:"name" json:"name"`
 	Description sql.NullString `db:"description" json:"description"`
 	Status      string         `db:"status" json:"status"`

@@ -22,18 +22,24 @@ func (q *Queries) CountUsers(ctx context.Context, db DBTX) (int64, error) {
 }
 
 const createUser = `-- name: CreateUser :execresult
-INSERT INTO users (name, description, status, created_at, updated_at)
-VALUES (?, ?, ?, NOW(), NOW())
+INSERT INTO users (name, uuid, description, status, created_at, updated_at)
+VALUES (?, ?, ?, ?, NOW(), NOW())
 `
 
 type CreateUserParams struct {
 	Name        string         `db:"name" json:"name"`
+	Uuid        string         `db:"uuid" json:"uuid"`
 	Description sql.NullString `db:"description" json:"description"`
 	Status      string         `db:"status" json:"status"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, db DBTX, arg CreateUserParams) (sql.Result, error) {
-	return db.ExecContext(ctx, createUser, arg.Name, arg.Description, arg.Status)
+	return db.ExecContext(ctx, createUser,
+		arg.Name,
+		arg.Uuid,
+		arg.Description,
+		arg.Status,
+	)
 }
 
 const deleteUser = `-- name: DeleteUser :exec
@@ -45,15 +51,16 @@ func (q *Queries) DeleteUser(ctx context.Context, db DBTX, id int64) error {
 	return err
 }
 
-const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, description, status, created_at, updated_at FROM users WHERE id = ?
+const getUserByUUID = `-- name: GetUserByUUID :one
+SELECT id, uuid, name, description, status, created_at, updated_at FROM users WHERE uuid = ?
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, db DBTX, id int64) (*User, error) {
-	row := db.QueryRowContext(ctx, getUserByID, id)
+func (q *Queries) GetUserByUUID(ctx context.Context, db DBTX, uuid string) (*User, error) {
+	row := db.QueryRowContext(ctx, getUserByUUID, uuid)
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.Uuid,
 		&i.Name,
 		&i.Description,
 		&i.Status,
@@ -64,7 +71,7 @@ func (q *Queries) GetUserByID(ctx context.Context, db DBTX, id int64) (*User, er
 }
 
 const getUsersByStatus = `-- name: GetUsersByStatus :many
-SELECT id, name, description, status, created_at, updated_at FROM users
+SELECT id, uuid, name, description, status, created_at, updated_at FROM users
 WHERE status = ?
 ORDER BY created_at DESC
 `
@@ -80,6 +87,7 @@ func (q *Queries) GetUsersByStatus(ctx context.Context, db DBTX, status string) 
 		var i User
 		if err := rows.Scan(
 			&i.ID,
+			&i.Uuid,
 			&i.Name,
 			&i.Description,
 			&i.Status,
@@ -100,7 +108,7 @@ func (q *Queries) GetUsersByStatus(ctx context.Context, db DBTX, status string) 
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, name, description, status, created_at, updated_at FROM users
+SELECT id, uuid, name, description, status, created_at, updated_at FROM users
 ORDER BY created_at DESC
 LIMIT ? OFFSET ?
 `
@@ -121,6 +129,7 @@ func (q *Queries) ListUsers(ctx context.Context, db DBTX, arg ListUsersParams) (
 		var i User
 		if err := rows.Scan(
 			&i.ID,
+			&i.Uuid,
 			&i.Name,
 			&i.Description,
 			&i.Status,
@@ -143,14 +152,14 @@ func (q *Queries) ListUsers(ctx context.Context, db DBTX, arg ListUsersParams) (
 const updateUser = `-- name: UpdateUser :exec
 UPDATE users
 SET name = ?, description = ?, status = ?, updated_at = NOW()
-WHERE id = ?
+WHERE uuid = ?
 `
 
 type UpdateUserParams struct {
 	Name        string         `db:"name" json:"name"`
 	Description sql.NullString `db:"description" json:"description"`
 	Status      string         `db:"status" json:"status"`
-	ID          int64          `db:"id" json:"id"`
+	Uuid        string         `db:"uuid" json:"uuid"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, db DBTX, arg UpdateUserParams) error {
@@ -158,7 +167,7 @@ func (q *Queries) UpdateUser(ctx context.Context, db DBTX, arg UpdateUserParams)
 		arg.Name,
 		arg.Description,
 		arg.Status,
-		arg.ID,
+		arg.Uuid,
 	)
 	return err
 }
