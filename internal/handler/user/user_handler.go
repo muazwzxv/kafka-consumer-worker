@@ -20,4 +20,5 @@ func NewUserHandler(i do.Injector) (*UserHandler, error) {
 
 func (h *UserHandler) RegisterRoutes(app *fiber.App) {
 	app.Post("/api/v1/users", h.CreateUser)
+	app.Get("/api/v1/user/:uuid", h.GetUser)
 }

@@ -18,7 +18,7 @@ type UserResponse struct {
 }
 
 type UserDetailResponse struct {
-	UserResponse
+	*UserResponse `json:"user"`
 }
 
 type CreateUserResponse struct {

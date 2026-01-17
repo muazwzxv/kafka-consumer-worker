@@ -9,4 +9,5 @@ import (
 
 type UserService interface {
 	CreateUser(ctx context.Context, req request.CreateUserRequest) (*response.UserResponse, error)
+	FetchUser(ctx context.Context, uuid string) (*response.UserDetailResponse, error)
 }

@@ -6,6 +6,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+var (
+	Internal   = "INTERNAL"
+	NotFound   = "NOT_FOUND"
+	BadRequest = "BAD_REQUEST"
+)
+
 type ErrorResponse struct {
 	HttpCode int    `json:"http_code"`
 	Message  string `json:"message"`

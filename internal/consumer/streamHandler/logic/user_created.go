@@ -22,7 +22,6 @@ func (l *UserCreatedLogic) ProcessUserPendingCreation(ctx context.Context, msg *
 	if updateErr := l.UserRepo.UpdateUser(ctx, user); updateErr != nil {
 		return err
 	}
-
 	log.WithContext(ctx).Infof("successfully processed user pending creation event for uuid: %s", msg.UUID)
 
 	return nil
